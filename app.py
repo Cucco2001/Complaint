@@ -2,27 +2,46 @@ import streamlit as st
 from retriever import retrieve_articles
 from generator import generate_complaint
 
-# Caricamento delle informazioni necessarie
-st.title("Formula 1 FIA Penalty Complaint Generator")
+st.set_page_config(page_title="F1 Complaint Generator", layout="centered")
 
-# Sezione per input penalità
-st.header("Inserisci dettagli della penalità")
-penalty_type = st.text_input("Tipo di penalità", "Es. 5 secondi per track limits")
-lap = st.number_input("Giro", min_value=1, max_value=1000, value=1)
-turn = st.number_input("Curva", min_value=1, max_value=100, value=1)
-driver = st.text_input("Pilota", "Es. Charles Leclerc")
-race_conditions = st.text_area("Condizioni della gara", "Es. Safety car in pista, pioggia, ecc.")
+# 🏁 Intestazione
+st.title("🏎️ Formula 1 - FIA Penalty Complaint Generator")
+st.markdown("Genera automaticamente una bozza formale di reclamo da inviare alla Direzione Gara FIA.")
 
-# Pannello per visualizzare il risultato
-if st.button("Genera Complaint"):
-    # Recupero degli articoli rilevanti dal regolamento
-    st.write("Recuperando articoli rilevanti...")
-    retrieved_articles = retrieve_articles(penalty_type, lap, turn, driver, race_conditions)
+# 📥 Input Utente
+with st.form("penalty_form"):
+    st.header("📋 Inserisci i dettagli della penalità")
+    penalty_type = st.text_input("Tipo di penalità", "5-second time penalty for track limits")
+    driver = st.text_input("Pilota (facoltativo)", "")
+    lap = st.text_input("Giro (facoltativo)", "")
+    turn = st.text_input("Curva (facoltativo)", "")
+    race_conditions = st.text_area("Contesto gara", "Wet conditions, Safety Car just ended.")
     
-    # Generazione del complaint formale
-    st.write("Generando il complaint...")
-    complaint = generate_complaint(retrieved_articles, penalty_type, lap, turn, driver, race_conditions)
+    submitted = st.form_submit_button("Genera Complaint")
 
-    # Mostrare il complaint generato
-    st.header("Complaint Generato")
-    st.text(complaint)
+# ⚙️ Processing
+if submitted:
+    with st.spinner("🔎 Recupero articoli rilevanti..."):
+        retrieved_articles = retrieve_articles(penalty_type, race_conditions)
+    
+    st.success(f"{len(retrieved_articles)} articoli rilevanti trovati")
+
+    # Mostra articoli recuperati (facoltativo ma utile)
+    with st.expander("📚 Articoli del Regolamento Trovati"):
+        for art in retrieved_articles:
+            st.markdown(f"**{art['title']}**")
+            st.markdown(art["content"][:600] + "...")
+
+    with st.spinner("✍️ Generazione del complaint..."):
+        complaint = generate_complaint(
+            articles=retrieved_articles,
+            penalty_type=penalty_type,
+            race_conditions=race_conditions,
+            driver=driver if driver else None,
+            lap=lap if lap else None,
+            turn=turn if turn else None
+        )
+
+    # 📤 Output finale
+    st.header("📄 Complaint Generato")
+    st.text_area("Risultato", value=complaint, height=400)

@@ -1,24 +1,45 @@
 import openai
+import streamlit as st
 
-# Funzione per generare un complaint tramite GPT
-def generate_complaint(retrieved_articles, penalty_type, lap, turn, driver, race_conditions):
-    # Costruisci il prompt
+# ---------------------- API SETUP ----------------------
+# NOTE: Replace with your actual OpenAI API key or use environment variable
+openai.api_key = st.secrets["OPENAI_API_KEY"] if "OPENAI_API_KEY" in st.secrets else ""
+
+
+def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
+    # Costruzione sezione "Regulation references"
+    regulation_section = ""
+    for article in articles:
+        regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
+
+    # Prompt formale
     prompt = f"""
-    Pilota: {driver}
-    Penalità: {penalty_type} al giro {lap}, curva {turn}
-    Condizioni gara: {race_conditions}
-    
-    Articoli del regolamento pertinenti:
-    {retrieved_articles}
+You are a legal assistant for a Formula 1 team. Write a formal complaint to the FIA Race Director to request a review of a penalty.
 
-    Scrivi un complaint formale alla Direzione Gara, argomentando la non validità della penalità in base agli articoli del regolamento FIA 2025.
-    """
-    
-    # Usa OpenAI GPT per generare il testo
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=500
+Penalty:
+{penalty_type}
+
+Race context:
+{race_conditions}
+
+{f"Driver: {driver}" if driver else ""}
+{f"Lap: {lap}, Turn: {turn}" if lap and turn else ""}
+
+Regulation references (from the FIA Sporting Regulations 2025):
+{regulation_section}
+
+Write the complaint in a professional and structured tone. Include references to the regulation paragraphs and explain why the penalty might have been incorrectly applied. Do not hallucinate. Use only the information above.
+"""
+
+    # Chiamata al modello GPT
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",  # o "gpt-3.5-turbo" per versioni più leggere
+        messages=[
+            {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
+        max_tokens=4000
     )
-    
-    return response.choices[0].text.strip()
+
+    return response.choices[0].message["content"].strip()
