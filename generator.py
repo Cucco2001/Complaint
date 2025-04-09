@@ -12,7 +12,19 @@ def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap
 
     # Prompt formale
     prompt = f"""
-You are a legal assistant for a Formula 1 team. Write a formal complaint to the FIA Race Director to request a review of a penalty.
+You are a legal advisor for a Formula 1 team. Based on the penalty details and regulatory references provided, write a formal complaint to the FIA Race Director.
+
+The letter must include:
+1. A formal header with: "To", "From", "Subject", "Date"
+2. Four numbered sections with headings:
+   - Factual Background
+   - Applicable Regulations
+   - Grounds for Review
+   - Conclusion and Request
+3. Direct quotations of regulation articles, where appropriate.
+4. A respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
+
+Do not invent information. Only use the context provided below.
 
 Penalty:
 {penalty_type}
@@ -25,8 +37,6 @@ Race context:
 
 Regulation references (from the FIA Sporting Regulations 2025):
 {regulation_section}
-
-Write the complaint in a professional and structured tone. Include references to the regulation paragraphs and explain why the penalty might have been incorrectly applied. Do not hallucinate. Use only the information above.
 """
 
     # Chiamata a GPT
