@@ -32,14 +32,15 @@ Write the complaint in a professional and structured tone. Include references to
 """
 
     # Chiamata al modello GPT
-    response = openai.ChatCompletion.create(
-        model="gpt-4o",  # o "gpt-3.5-turbo" per versioni più leggere
-        messages=[
-            {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.2,
-        max_tokens=4000
-    )
+    client = openai.OpenAI()
+    response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0.2,
+    max_tokens=4000
+)
 
     return response.choices[0].message["content"].strip()
