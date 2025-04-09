@@ -6,7 +6,7 @@ penalty_type = "10 second stop-and-go penalty"
 race_conditions = "collision between two cars during the final laps of the race"
 
 # Esecuzione della funzione
-articles = retrieve_articles(penalty_type, race_conditions, k=6)
+articles = retrieve_articles(penalty_type, race_conditions, k=5)
 
 # Visualizzazione dei risultati
 for i, article in enumerate(articles, 1):

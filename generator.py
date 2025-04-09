@@ -1,10 +1,8 @@
-import openai
 import streamlit as st
+from openai import OpenAI
 
 # ---------------------- API SETUP ----------------------
-# NOTE: Replace with your actual OpenAI API key or use environment variable
-openai.api_key = st.secrets["OPENAI_API_KEY"] if "OPENAI_API_KEY" in st.secrets else ""
-
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
     # Costruzione sezione "Regulation references"
@@ -31,16 +29,15 @@ Regulation references (from the FIA Sporting Regulations 2025):
 Write the complaint in a professional and structured tone. Include references to the regulation paragraphs and explain why the penalty might have been incorrectly applied. Do not hallucinate. Use only the information above.
 """
 
-    # Chiamata al modello GPT
-    client = openai.OpenAI()
+    # Chiamata a GPT
     response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
-        {"role": "user", "content": prompt}
-    ],
-    temperature=0.2,
-    max_tokens=4000
-)
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
+        max_tokens=4000
+    )
 
-    return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
