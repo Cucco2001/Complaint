@@ -1,17 +1,72 @@
 import streamlit as st
 from openai import OpenAI
 
-# ---------------------- API SETUP ----------------------
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
-    # Costruzione sezione "Regulation references"
-    regulation_section = ""
+def filter_relevant_articles(articles, penalty_type, race_conditions):
+    # Prepara input per GPT che farà da selettore di articoli
+    articles_formatted = ""
     for article in articles:
+        articles_formatted += f"--- {article['title']} ---\n{article['content']}\n"
+
+    prompt_filter = f"""
+You are a Formula 1 Sporting Regulations analyst.
+
+A driver has received the following penalty:
+Penalty: {penalty_type}
+Context: {race_conditions}
+
+Below are several articles from the FIA 2025 Sporting Regulations. Select ONLY the ones that are directly relevant to this case. Ignore generic or unrelated rules.
+
+Respond in JSON format as follows:
+[
+  {{"article": "33", "score": 3, "reason": "Directly governs track limits"}},
+  ...
+]
+Articles:
+{articles_formatted}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": prompt_filter}
+        ],
+        temperature=0.2,
+        max_tokens=4000
+    )
+
+    # Estrai gli articoli selezionati da GPT
+    import json
+    import re
+    json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
+    selected_articles = []
+    if json_match:
+        try:
+            filtered = json.loads(json_match.group(0))
+            selected_articles = [a["article"] for a in filtered if a["score"] >= 2]
+        except:
+            pass
+
+    # Ritorna solo gli articoli presenti nella selezione
+    final = []
+    for art in articles:
+        num = art["title"].split(")")[0].strip()
+        if num in selected_articles:
+            final.append(art)
+
+    return final
+
+def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
+    # STEP 1 – FILTRAGGIO INTELLIGENTE
+    filtered_articles = filter_relevant_articles(articles, penalty_type, race_conditions)
+
+    # STEP 2 – COSTRUZIONE DEL PROMPT FINALE
+    regulation_section = ""
+    for article in filtered_articles:
         regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
 
-    # Prompt formale
-    prompt = f"""
+    prompt_generate = f"""
 You are a legal advisor for a Formula 1 team. Based on the penalty details and regulatory references provided, write a formal complaint to the FIA Race Director.
 
 The letter must include:
@@ -23,8 +78,6 @@ The letter must include:
    - Conclusion and Request
 3. Direct quotations of regulation articles, where appropriate.
 4. A respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
-Only refer to the most relevant articles from the list below. You may ignore general or unrelated articles. When multiple articles are clearly applicable, cite all of them in the “Applicable Regulations” section.
-Do not invent information. Only use the context provided below.
 
 Penalty:
 {penalty_type}
@@ -39,12 +92,11 @@ Regulation references (from the FIA Sporting Regulations 2025):
 {regulation_section}
 """
 
-    # Chiamata a GPT
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt_generate}
         ],
         temperature=0.2,
         max_tokens=4000
