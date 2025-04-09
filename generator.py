@@ -23,7 +23,7 @@ The letter must include:
    - Conclusion and Request
 3. Direct quotations of regulation articles, where appropriate.
 4. A respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
-
+Only refer to the most relevant articles from the list below. You may ignore general or unrelated articles. When multiple articles are clearly applicable, cite all of them in the “Applicable Regulations” section.
 Do not invent information. Only use the context provided below.
 
 Penalty:
