@@ -61,6 +61,19 @@ def retrieve_articles(penalty_type: str, race_conditions: str, k: int = 12):
                 "content": metadata[idx]["content"]
             })
 
-    # Aggregazione degli articoli completi filtrando titoli inconsistenti
+   # Aggregazione articoli
     full_articles = aggregate_full_articles(retrieved_chunks, full_regulation)
+
+    # === Forza inclusione Art. 26 se si parla di unsafe, safety, pit entry, red flag ===
+    trigger_text = (penalty_type + " " + race_conditions).lower()
+    if any(term in trigger_text for term in ["unsafe", "safety", "pit entry", "red flag"]):
+        if not any(article["title"].startswith("26)") for article in full_articles):
+            art26_chunks = [entry for entry in full_regulation if entry["title"].startswith("26)")]
+            if art26_chunks:
+                art26_combined = " ".join(chunk["content"] for chunk in art26_chunks)
+                full_articles.append({
+                    "title": art26_chunks[0]["title"],
+                    "content": art26_combined
+                })
+
     return full_articles
