@@ -97,6 +97,7 @@ The letter must include:
 4. You must include ALL the regulation articles that could strengthen the defense or clarify procedural aspects, not just the main ones.
 5. If the wording or scope of any regulation is ambiguous in this context, explicitly explain that ambiguity and its implications in the "Grounds for Review" section.
 6. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
+7. If appropriate, evaluate whether the penalty imposed was proportionate to the action, and if similar conduct has been treated differently in the past.
 
 Penalty:
 {penalty_type}
