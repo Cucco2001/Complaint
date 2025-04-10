@@ -20,27 +20,38 @@ def load_full_regulation():
     with open("FIA_2025_Sporting_Regulations_Structured.json", "r", encoding="utf-8") as f:
         return json.load(f)
 
-# === AGGREGAZIONE ARTICOLI COMPLETI (FILTRATI) ===
-def aggregate_full_articles(retrieved_chunks, json_data):
-    seen_titles = set()
-    full_articles = []
+# === AGGREGAZIONE CHUNKS ADIACENTI SOLO PER ART. 64 ===
+def aggregate_chunks_selectively(retrieved_chunks, json_data, window=1):
+    seen_ids = set()
+    selected_chunks = []
 
     for res in retrieved_chunks:
         title = res['title'].strip()
+        matching_indices = [i for i, entry in enumerate(json_data) if entry['title'] == title]
 
-        # Filtra titoli malformati o sospetti
-        if title and len(title) > 4 and title[0].isdigit() and ")" in title:
-            if title not in seen_titles:
-                combined = " ".join(
-                    entry["content"] for entry in json_data if entry["title"] == title
-                )
-                full_articles.append({
-                    "title": title,
-                    "content": combined
-                })
-                seen_titles.add(title)
-
-    return full_articles
+        if title.startswith("64)"):
+            for idx in matching_indices:
+                for offset in range(-window, window + 1):
+                    adj_idx = idx + offset
+                    if 0 <= adj_idx < len(json_data):
+                        chunk_id = json_data[adj_idx]['id']
+                        if chunk_id not in seen_ids and json_data[adj_idx]['title'] == title:
+                            selected_chunks.append({
+                                "title": title,
+                                "content": json_data[adj_idx]["content"]
+                            })
+                            seen_ids.add(chunk_id)
+        else:
+            for idx in matching_indices:
+                if 0 <= idx < len(json_data):
+                    chunk_id = json_data[idx]['id']
+                    if chunk_id not in seen_ids:
+                        selected_chunks.append({
+                            "title": title,
+                            "content": json_data[idx]["content"]
+                        })
+                        seen_ids.add(chunk_id)
+    return selected_chunks
 
 # === FUNZIONE PRINCIPALE DI RETRIEVAL ===
 def retrieve_articles(penalty_type: str, race_conditions: str, k: int = 12):
@@ -62,7 +73,7 @@ def retrieve_articles(penalty_type: str, race_conditions: str, k: int = 12):
             })
 
    # Aggregazione articoli
-    full_articles = aggregate_full_articles(retrieved_chunks, full_regulation)
+    full_articles = aggregate_chunks_selectively(retrieved_chunks, full_regulation)
 
     # === Forza inclusione Art. 26 se si parla di unsafe, safety, pit entry, red flag ===
     trigger_text = (penalty_type + " " + race_conditions).lower()
