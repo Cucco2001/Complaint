@@ -1,4 +1,6 @@
 import streamlit as st
+import json
+import re
 from openai import OpenAI
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -16,12 +18,12 @@ A driver has received the following penalty:
 Penalty: {penalty_type}
 Context: {race_conditions}
 
-Below are several articles from the FIA 2025 Sporting Regulations. Select ALL the articles that could be useful in building a legal defense for the case described, even if they are not the most semantically obvious ones.
-Note: Even general articles such as Article 26 (GENERAL SAFETY) may contain useful support for the defense, especially in cases involving pit lane behavior or unsafe driving assessments.
+Below are several articles from the FIA 2025 Sporting Regulations. Select ONLY the articles that could be genuinely useful in supporting a legal defense of the driver. Avoid listing articles that are only loosely connected or which do not add argumentative value.
 
 Respond in JSON format as follows:
 [
   {{"article": "33", "score": 3, "reason": "Directly governs track limits"}},
+  {{"article": "17", "score": 2, "reason": "Governs right of review"}},
   ...
 ]
 Articles:
@@ -30,49 +32,54 @@ Articles:
 
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {"role": "user", "content": prompt_filter}
-        ],
+        messages=[{"role": "user", "content": prompt_filter}],
         temperature=0.2,
         max_tokens=4000
     )
 
-    # Estrai articoli selezionati
-    import json
-    import re
-    json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
     selected_articles = []
+    strategy_hints = []
+    json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
     if json_match:
         try:
             filtered = json.loads(json_match.group(0))
-            selected_articles = [a["article"] for a in filtered if a["score"] >= 2]
-        except:
+            for a in filtered:
+                if a["score"] >= 2:
+                    selected_articles.append(a["article"])
+                    strategy_hints.append(a["reason"])
+        except Exception:
             pass
 
-    # Forza inclusione Art. 54 se assente
-    if "54" not in selected_articles:
+    # Forza inclusione Art. 54 se penalità è comportamentale
+    if "54" not in selected_articles and any(x in penalty_type.lower() for x in ["collision", "incident", "unsafe"]):
         selected_articles.append("54")
+        strategy_hints.append("Standard article for incident and fault assessment (collision/unsafe behavior)")
 
-    # Ritorna articoli corrispondenti
-    final = []
+    # Estrai articoli completi
+    final_articles = []
     for art in articles:
         num = art["title"].split(")")[0].strip()
         if num in selected_articles:
-            final.append(art)
+            final_articles.append(art)
 
-    return final
+    return {
+        "articles": final_articles,
+        "strategy_hints": list(set(strategy_hints))  # Elimina duplicati
+    }
+
 def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
     # STEP 1 – FILTRAGGIO INTELLIGENTE
+    filtered_result = filter_relevant_articles(articles, penalty_type, race_conditions)
+    filtered_articles = filtered_result["articles"]
+    strategy_hints = filtered_result["strategy_hints"]
 
-    filtered_articles = filter_relevant_articles(articles, penalty_type, race_conditions)
-
-    # STEP 2 – COSTRUZIONE DEL PROMPT FINALE
+    # STEP 2 – COSTRUZIONE DEL PROMPT
     regulation_section = ""
     for article in filtered_articles:
         regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
 
     prompt_generate = f"""
-You are a legal advisor for a Formula 1 team. Based on the penalty details and regulatory references provided, write a formal complaint to the FIA Race Director.
+You are a legal advisor for a Formula 1 team. Based on the penalty details, regulatory references, and strategy considerations provided, write a formal complaint to the FIA Race Director.
 
 The letter must include:
 1. A formal header with: "To", "From", "Subject", "Date"
@@ -81,11 +88,14 @@ The letter must include:
    - Applicable Regulations
    - Grounds for Review
    - Conclusion and Request
-3. Direct quotations of regulation articles, where appropriate.
-4. You should include the regulation articles that could strengthen the defense or clarify procedural aspects.
-5. If the wording or scope of any regulation is ambiguous in this context, explicitly explain that ambiguity and its implications in the "Grounds for Review" section.
-6. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
-7. If appropriate, evaluate whether the penalty imposed was proportionate to the action, and if similar conduct has been treated differently in the past.
+
+Guidance:
+- Quote regulation articles verbatim when useful.
+- Use any ambiguity in article wording to support the defense in Section 3.
+- Evaluate whether the penalty was proportionate to the actual impact or intent.
+- If similar past incidents were treated differently, mention them to support a consistency argument.
+- Propose relevant evidence types (telemetry, radio, footage) that could assist in the review.
+- Maintain a professional, respectful, and legal tone, as expected from a team’s Sporting & Legal Department.
 
 Penalty:
 {penalty_type}
@@ -98,6 +108,11 @@ Race context:
 
 Regulation references (from the FIA Sporting Regulations 2025):
 {regulation_section}
+
+Legal strategy considerations (from article analysis):
+{', '.join(strategy_hints)}
+
+Before writing, briefly reflect on what elements of this case might be challenged or reinterpreted to the team’s advantage.
 """
 
     response = client.chat.completions.create(
