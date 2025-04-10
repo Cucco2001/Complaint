@@ -83,19 +83,20 @@ You are a legal advisor for a Formula 1 team. Based on the penalty details, regu
 
 The letter must include:
 1. A formal header with: "To", "From", "Subject", "Date"
-2. Four numbered sections with headings:
+2. Four clearly separated sections with headings:
    - Factual Background
    - Applicable Regulations
    - Grounds for Review
    - Conclusion and Request
 
-Guidance:
-- Quote regulation articles verbatim when useful.
-- Use any ambiguity in article wording to support the defense in Section 3.
-- Evaluate whether the penalty was proportionate to the actual impact or intent.
-- If similar past incidents were treated differently, mention them to support a consistency argument.
-- Propose relevant evidence types (telemetry, radio, footage) that could assist in the review.
-- Maintain a professional, respectful, and legal tone, as expected from a team’s Sporting & Legal Department.
+Instructions:
+- Quote regulation articles verbatim when appropriate.
+- Focus especially on articles that support a legal defense, procedural clarity, or proportionality in stewarding decisions.
+- If any regulation’s wording or application is ambiguous, explicitly explain that ambiguity and how it weakens the basis for the penalty.
+- Consider whether the penalty was proportionate to the incident and if it caused undue harm given the outcome (e.g., both drivers penalized equally by consequence).
+- If similar past incidents were treated differently, reference them briefly to support a fairness and consistency argument.
+- Mention what types of evidence (e.g., telemetry, on-board footage, radio communications) could support a re-evaluation.
+- Use a respectful, legal tone aligned with that of official FIA Sporting & Legal Department correspondence.
 
 Penalty:
 {penalty_type}
@@ -112,7 +113,8 @@ Regulation references (from the FIA Sporting Regulations 2025):
 Legal strategy considerations (from article analysis):
 {', '.join(strategy_hints)}
 
-Before writing, briefly reflect on what elements of this case might be challenged or reinterpreted to the team’s advantage.
+Pre-writing instruction:
+Before writing, reflect on which of the above strategy considerations are most useful. Then use those insights to build the legal reasoning in the “Grounds for Review” section.
 """
 
     response = client.chat.completions.create(
