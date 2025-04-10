@@ -55,7 +55,9 @@ Articles:
 
     # Riconoscimento automatico di casi speciali
     trigger_lower = (penalty_type + " " + race_conditions).lower()
-    if "unsafe" in penalty_type.lower() and "pit entry" in penalty_type.lower():
+    # Forza l’inclusione di Art. 26 se si parla di unsafe entry o safety
+    trigger_all = (penalty_type + " " + race_conditions).lower()
+    if any(kw in trigger_all for kw in ["unsafe", "safety", "red flag", "pit entry"]):
         if "26" not in selected_articles:
             selected_articles.append("26")
     if "pit entry" in trigger_lower and "red flag" in trigger_lower:
