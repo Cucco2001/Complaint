@@ -53,18 +53,6 @@ Articles:
     if "54" not in selected_articles:
         selected_articles.append("54")
 
-    # Riconoscimento automatico di casi speciali
-    trigger_lower = (penalty_type + " " + race_conditions).lower()
-    # Forza l’inclusione di Art. 26 se si parla di unsafe entry o safety
-    trigger_all = (penalty_type + " " + race_conditions).lower()
-    if any(kw in trigger_all for kw in ["unsafe", "safety", "red flag", "pit entry"]):
-        if "26" not in selected_articles:
-            selected_articles.append("26")
-    if "pit entry" in trigger_lower and "red flag" in trigger_lower:
-        for extra in ["34", "37", "26"]:
-            if extra not in selected_articles:
-                selected_articles.append(extra)
-
     # Ritorna articoli corrispondenti
     final = []
     for art in articles:
