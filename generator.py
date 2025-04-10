@@ -16,7 +16,7 @@ A driver has received the following penalty:
 Penalty: {penalty_type}
 Context: {race_conditions}
 
-Below are several articles from the FIA 2025 Sporting Regulations. Select ONLY the ones that are directly relevant to this case. Ignore generic or unrelated rules.
+Below are several articles from the FIA 2025 Sporting Regulations. Select ALL the articles that could be useful in building a legal defense for the case described, even if they are not the most semantically obvious ones.
 
 Respond in JSON format as follows:
 [
@@ -41,14 +41,10 @@ Articles:
     import re
     json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
     selected_articles = []
-    reasons_map = {}
     if json_match:
         try:
             filtered = json.loads(json_match.group(0))
-            for a in filtered:
-                if a["score"] >= 2:
-                    selected_articles.append(a["article"])
-                reasons_map[a["article"]] = a.get("reason", "")
+            selected_articles = [a["article"] for a in filtered if a["score"] >= 2]
         except:
             pass
 
@@ -56,14 +52,12 @@ Articles:
     if "54" not in selected_articles:
         selected_articles.append("54")
 
-    # Se solo 1 articolo selezionato, includi anche il primo marginale (score 1)
-    if len(selected_articles) <= 1:
-        try:
-            marginal = [a for a in filtered if a["score"] == 1]
-            if marginal:
-                selected_articles.append(marginal[0]["article"])
-        except:
-            pass
+    # Riconoscimento automatico di casi speciali
+    trigger_lower = (penalty_type + " " + race_conditions).lower()
+    if "pit entry" in trigger_lower and "red flag" in trigger_lower:
+        for extra in ["34", "37"]:
+            if extra not in selected_articles:
+                selected_articles.append(extra)
 
     # Ritorna articoli corrispondenti
     final = []
@@ -94,7 +88,8 @@ The letter must include:
    - Grounds for Review
    - Conclusion and Request
 3. Direct quotations of regulation articles, where appropriate.
-4. A respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
+4. You must include ALL the regulation articles that could strengthen the defense or clarify procedural aspects, not just the main ones.
+5. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
 
 Penalty:
 {penalty_type}
