@@ -17,6 +17,7 @@ Penalty: {penalty_type}
 Context: {race_conditions}
 
 Below are several articles from the FIA 2025 Sporting Regulations. Select ALL the articles that could be useful in building a legal defense for the case described, even if they are not the most semantically obvious ones.
+Note: Even general articles such as Article 26 (GENERAL SAFETY) may contain useful support for the defense, especially in cases involving pit lane behavior or unsafe driving assessments.
 
 Respond in JSON format as follows:
 [
@@ -54,6 +55,9 @@ Articles:
 
     # Riconoscimento automatico di casi speciali
     trigger_lower = (penalty_type + " " + race_conditions).lower()
+    if "unsafe" in penalty_type.lower() and "pit entry" in penalty_type.lower():
+        if "26" not in selected_articles:
+            selected_articles.append("26")
     if "pit entry" in trigger_lower and "red flag" in trigger_lower:
         for extra in ["34", "37", "26"]:
             if extra not in selected_articles:
