@@ -55,7 +55,7 @@ Articles:
     # Riconoscimento automatico di casi speciali
     trigger_lower = (penalty_type + " " + race_conditions).lower()
     if "pit entry" in trigger_lower and "red flag" in trigger_lower:
-        for extra in ["34", "37"]:
+        for extra in ["34", "37", "26"]:
             if extra not in selected_articles:
                 selected_articles.append(extra)
 
@@ -89,7 +89,8 @@ The letter must include:
    - Conclusion and Request
 3. Direct quotations of regulation articles, where appropriate.
 4. You must include ALL the regulation articles that could strengthen the defense or clarify procedural aspects, not just the main ones.
-5. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
+5. If the wording or scope of any regulation is ambiguous in this context, explicitly explain that ambiguity and its implications in the "Grounds for Review" section.
+6. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
 
 Penalty:
 {penalty_type}

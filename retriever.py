@@ -43,7 +43,7 @@ def aggregate_full_articles(retrieved_chunks, json_data):
     return full_articles
 
 # === FUNZIONE PRINCIPALE DI RETRIEVAL ===
-def retrieve_articles(penalty_type: str, race_conditions: str, k: int = 7):
+def retrieve_articles(penalty_type: str, race_conditions: str, k: int = 8):
     index, metadata = load_faiss_index()
     full_regulation = load_full_regulation()
 
