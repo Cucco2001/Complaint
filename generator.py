@@ -36,19 +36,36 @@ Articles:
         max_tokens=4000
     )
 
-    # Estrai gli articoli selezionati da GPT
+    # Estrai articoli selezionati
     import json
     import re
     json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
     selected_articles = []
+    reasons_map = {}
     if json_match:
         try:
             filtered = json.loads(json_match.group(0))
-            selected_articles = [a["article"] for a in filtered if a["score"] >= 2]
+            for a in filtered:
+                if a["score"] >= 2:
+                    selected_articles.append(a["article"])
+                reasons_map[a["article"]] = a.get("reason", "")
         except:
             pass
 
-    # Ritorna solo gli articoli presenti nella selezione
+    # Forza inclusione Art. 54 se assente
+    if "54" not in selected_articles:
+        selected_articles.append("54")
+
+    # Se solo 1 articolo selezionato, includi anche il primo marginale (score 1)
+    if len(selected_articles) <= 1:
+        try:
+            marginal = [a for a in filtered if a["score"] == 1]
+            if marginal:
+                selected_articles.append(marginal[0]["article"])
+        except:
+            pass
+
+    # Ritorna articoli corrispondenti
     final = []
     for art in articles:
         num = art["title"].split(")")[0].strip()
@@ -56,9 +73,9 @@ Articles:
             final.append(art)
 
     return final
-
 def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
     # STEP 1 – FILTRAGGIO INTELLIGENTE
+
     filtered_articles = filter_relevant_articles(articles, penalty_type, race_conditions)
 
     # STEP 2 – COSTRUZIONE DEL PROMPT FINALE
