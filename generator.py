@@ -118,7 +118,7 @@ Before writing, reflect on which of the above strategy considerations are most u
 """
 
     response = client.chat.completions.create(
-        model="gpt-4-turbo",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
             {"role": "user", "content": prompt_generate}
