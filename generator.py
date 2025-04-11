@@ -38,7 +38,7 @@ Articles:
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
-        max_tokens=4096
+        max_tokens=4000
     )
 
     # Extract JSON safely
@@ -108,7 +108,7 @@ Legal Strategy Notes:
         model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
-        max_tokens=4096
+        max_tokens=4000
     )
 
     return response.choices[0].message.content.strip()
