@@ -1,113 +1,102 @@
-import streamlit as st
 import json
 import re
 from openai import OpenAI
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+client = OpenAI()
 
 def filter_relevant_articles(articles, penalty_type, race_context):
-    """
-    First-layer GPT call to select only the most legally relevant articles and strategy notes.
-    """
-    regulations_text = "\n".join(
-        f"--- {article['title']} ---\n{article['content']}" for article in articles
-    )
+    articles_formatted = ""
+    for article in articles:
+        articles_formatted += f"--- {article['title']} ---\n{article['content']}\n"
 
-    prompt = f"""
+    prompt_filter = f"""
 You are a Formula 1 Sporting Regulations analyst.
 
-A driver has received the following penalty:
 Penalty: {penalty_type}
 Context: {race_context}
 
-Below are articles from the FIA 2025 Sporting Regulations. Your task is to:
-- Select ONLY those articles that are genuinely useful in supporting a legal defense.
-- Avoid articles only loosely connected or offering no argumentative value.
+Below are excerpts from the FIA 2025 Sporting Regulations. Select ONLY the articles that could be genuinely useful in supporting a legal defense of the driver. Avoid listing irrelevant or tangentially related ones.
 
-Respond strictly in JSON format like this:
+Respond in JSON format as:
 [
-  {{"article": "33", "score": 3, "reason": "Directly governs track limits"}},
-  {{"article": "17", "score": 2, "reason": "Outlines petition for review"}}
+  {{"article": "54.2(a)", "score": 3, "reason": "Defines burden of proof for assigning blame"}},
+  {{"article": "17.4", "score": 2, "reason": "Allows request for review if new evidence is present"}}
 ]
 
 Articles:
-{regulations_text}
+{articles_formatted}
 """
 
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
+        messages=[{"role": "user", "content": prompt_filter}],
+        temperature=0.2,
         max_tokens=4000
     )
 
-    # Extract JSON safely
-    selected_articles, strategy_hints = [], []
+    selected_articles = []
+    strategy_hints = []
     json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
     if json_match:
         try:
-            parsed = json.loads(json_match.group(0))
-            for entry in parsed:
-                if int(entry.get("score", 0)) >= 2:
-                    selected_articles.append(entry["article"])
-                    strategy_hints.append(entry["reason"])
+            filtered = json.loads(json_match.group(0))
+            for a in filtered:
+                if a["score"] >= 2:
+                    selected_articles.append(a["article"])
+                    strategy_hints.append(a["reason"])
         except Exception:
             pass
 
-    # Always include Article 54 if behavioral penalty
-    if "54" not in selected_articles and any(x in penalty_type.lower() for x in ["collision", "incident", "unsafe"]):
-        selected_articles.append("54")
-        strategy_hints.append("Standard article for assessing driver blame and incident responsibility")
+    final_articles = []
+    for art in articles:
+        num = art["title"].split(")")[0].strip()
+        if num in selected_articles:
+            final_articles.append(art)
 
-    filtered = [a for a in articles if a["title"].split(")")[0].strip() in selected_articles]
-
-    return {"articles": filtered, "strategy_hints": list(set(strategy_hints))}
+    return {
+        "articles": final_articles,
+        "strategy_hints": list(set(strategy_hints))
+    }
 
 def generate_complaint(articles, penalty_type, race_context, driver=None, lap=None, turn=None):
-    """
-    Second-layer GPT call: builds the formal legal complaint using ONLY selected articles.
-    """
-    # Step 1: Select legal articles
-    result = filter_relevant_articles(articles, penalty_type, race_context)
-    selected_articles = result["articles"]
-    strategy = result["strategy_hints"]
+    filtered_result = filter_relevant_articles(articles, penalty_type, race_context)
+    filtered_articles = filtered_result["articles"]
+    strategy_hints = filtered_result["strategy_hints"]
 
-    # Step 2: Format regulation section
-    regulation_block = "\n\n".join(
-        f"--- {a['title']} ---\n{a['content']}" for a in selected_articles
-    )
+    regulation_section = ""
+    for article in filtered_articles:
+        regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
 
-    # Step 3: Construct final-generation prompt
-    prompt = f"""
+    prompt_generate = f"""
 You are a legal advisor for a Formula 1 team. Write a formal complaint letter challenging a penalty.
-STRICT RULES:
-- Use ONLY the regulation articles below. DO NOT add external knowledge.
-- Organize the letter in 4 titled sections:
-  1. Factual Background
-  2. Applicable Regulations
-  3. Grounds for Review
-  4. Conclusion and Request
-- Quote AT LEAST one article VERBATIM in section 2.
-- DO NOT invent any regulation or wording.
-- Do NOT reference articles not listed below.
-- Maintain a respectful, legal tone like a real FIA Sporting & Legal Department letter.
 
-Context:
+CRITICAL RULES:
+- Use ONLY the regulation articles provided below.
+- You MUST quote AT LEAST ONE article, more if relevant.
+- DO NOT refer to any article not shown below.
+- If article wording is ambiguous or open to interpretation, highlight this as a defense.
+- If the penalty appears excessive, emphasize proportionality.
+- Keep a legal and respectful tone.
+
 Penalty: {penalty_type}
-Race: {race_context}
-{f"Driver: {driver}" if driver else ""} {f"Lap: {lap}, Turn: {turn}" if lap and turn else ""}
+Context: {race_context}
+Driver: {driver if driver else 'N/A'}
+Lap: {lap if lap else 'N/A'}, Turn: {turn if turn else 'N/A'}
 
-Articles Provided:
-{regulation_block}
+Regulation References:
+{regulation_section}
 
-Legal Strategy Notes:
-{'; '.join(strategy)}
+Strategic Considerations:
+{', '.join(strategy_hints)}
 """
 
     response = client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a Formula 1 legal complaint writer."},
+            {"role": "user", "content": prompt_generate}
+        ],
+        temperature=0.2,
         max_tokens=4000
     )
 
