@@ -79,66 +79,32 @@ def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap
         regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
 
     prompt_generate = f"""
-You are acting as the Lead Legal Advisor for a Formula 1 team. Your task is to write a formal complaint to the FIA Race Director challenging a penalty, based exclusively on the articles of the FIA 2025 Formula 1 Sporting Regulations provided below.
+You are a legal advisor for a Formula 1 team. Write a formal complaint to the FIA Race Director regarding a race penalty.
 
-⚠️ IMPORTANT CONSTRAINTS:
+Constraints:
+- You must use **only the information provided in this prompt**. Do **not** rely on external knowledge.
+- You must quote **at least one regulation article** from the “Regulation References” section; cite more if relevant.
+- Do **not invent or reference** any regulation not included in the input.
 
-- **You may only refer to regulation articles explicitly listed in the section titled "Regulation References".**
-- **Do not use any outside knowledge of the given FIA rules.**
-- **If a concept is not covered in the supplied articles, do not mention it.**
-- **Do not invent regulation numbers or paraphrase rules that are not present.**
+Format:
+1. Factual Background  
+2. Applicable Regulations  
+3. Grounds for Review  
+4. Conclusion and Request
 
-Your letter must be written in the structure and tone expected from a Formula 1 team’s Legal & Sporting Department. Follow this format precisely:
+Tone: Professional, structured, legal — as expected from a team’s Sporting & Legal Department.
 
----
+Inputs:
+Penalty: {penalty_type}  
+Race Context: {race_conditions}  
+{f"Driver: {driver}" if driver else ""}  
+{f"Lap: {lap}, Turn: {turn}" if lap and turn else ""}  
 
-### Formal Header:
-- To
-- From
-- Subject
-- Date
-
----
-
-### 1. Factual Background
-Summarize the penalty imposed, including the relevant context (e.g., track conditions, lap, turn, driver). This section must be objective and chronological.
-
-### 2. Applicable Regulations
-Only quote and comment on the articles explicitly provided in the "Regulation References" section. Always use **verbatim quotations** with article numbers when possible.
-
-### 3. Grounds for Review
-Build the case for review by:
-- Arguing any **ambiguity** in article wording or scope;
-- Challenging the **application** of specific articles in this context;
-- Assessing whether the **penalty was proportionate**;
-- Pointing out **inconsistencies** with how these same articles were applied in the past, if that can be inferred from the strategy considerations.
-
-Every argument here must be **explicitly anchored** to at least one of the regulation articles provided.
-
-You may also mention evidence types (telemetry, on-board, radio) that could assist a re-evaluation, but **only if justified by a specific regulation**.
-
-### 4. Conclusion and Request
-Formulate a precise and respectful request: either for withdrawal, reduction, or reassessment of the penalty. Reaffirm commitment to sporting fairness and regulatory consistency.
-
----
-
-Penalty:
-{penalty_type}
-
-Race context:
-{race_conditions}
-
-{f"Driver: {driver}" if driver else ""}
-{f"Lap: {lap}, Turn: {turn}" if lap and turn else ""}
-
-Regulation References (from the FIA Sporting Regulations 2025):
+Regulation References:  
 {regulation_section}
 
-Legal Strategy Considerations:
+Strategy hints:  
 {', '.join(strategy_hints)}
-
-Before writing:
-Briefly reflect on which of the above strategy considerations are most useful. Then write the complaint using **only** the regulation references above.
 """
 
     response = client.chat.completions.create(
