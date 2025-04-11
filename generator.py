@@ -79,38 +79,55 @@ def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap
         regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
 
     prompt_generate = f"""
-You are acting as the Lead Legal Advisor for a Formula 1 team. Your task is to draft a formal complaint to the FIA Race Director, challenging a penalty imposed during a Grand Prix. You have access to all relevant regulatory references and strategic considerations.
+You are acting as the Lead Legal Advisor for a Formula 1 team. Your task is to write a formal complaint to the FIA Race Director challenging a penalty, based exclusively on the articles of the FIA 2025 Formula 1 Sporting Regulations provided below.
 
-Your output must follow this exact structure:
-1. A formal header with:
-   - To
-   - From
-   - Subject
-   - Date
+⚠️ IMPORTANT CONSTRAINTS:
 
-2. Four clearly separated numbered sections with headings:
-   - Factual Background
-   - Applicable Regulations
-   - Grounds for Review
-   - Conclusion and Request
+- **You may only refer to regulation articles explicitly listed in the section titled "Regulation References".**
+- **Do not use any outside knowledge of the given FIA rules.**
+- **If a concept is not covered in the supplied articles, do not mention it.**
+- **Do not invent regulation numbers or paraphrase rules that are not present.**
 
-Important instructions:
+Your letter must be written in the structure and tone expected from a Formula 1 team’s Legal & Sporting Department. Follow this format precisely:
 
-- In Section 2, **explicitly quote** the most relevant regulation articles (from the provided Regulation References). Do **not** paraphrase unless absolutely necessary.
-- In Section 3, use the legal strategy considerations provided to construct a defense. Make **direct reference to the quoted articles**, and explain why their application in this context is either ambiguous, misapplied, or disproportionate.
-- Always comment on:
-   • whether the regulation wording is ambiguous in this case;
-   • whether the penalty is proportionate to the incident;
-   • whether precedent suggests inconsistent stewarding.
+---
 
-- If helpful to the defense, mention types of evidence that could support a review (e.g., telemetry, onboard footage, radio comms).
-- Maintain a respectful, professional legal tone as expected from a team’s Sporting & Legal Department.
+### Formal Header:
+- To
+- From
+- Subject
+- Date
 
-Your goal is to produce a letter that could realistically be submitted to the FIA in a formal dispute.
+---
 
-Case details:
-Penalty: {penalty_type}
-Race context: {race_conditions}
+### 1. Factual Background
+Summarize the penalty imposed, including the relevant context (e.g., track conditions, lap, turn, driver). This section must be objective and chronological.
+
+### 2. Applicable Regulations
+Only quote and comment on the articles explicitly provided in the "Regulation References" section. Always use **verbatim quotations** with article numbers when possible.
+
+### 3. Grounds for Review
+Build the case for review by:
+- Arguing any **ambiguity** in article wording or scope;
+- Challenging the **application** of specific articles in this context;
+- Assessing whether the **penalty was proportionate**;
+- Pointing out **inconsistencies** with how these same articles were applied in the past, if that can be inferred from the strategy considerations.
+
+Every argument here must be **explicitly anchored** to at least one of the regulation articles provided.
+
+You may also mention evidence types (telemetry, on-board, radio) that could assist a re-evaluation, but **only if justified by a specific regulation**.
+
+### 4. Conclusion and Request
+Formulate a precise and respectful request: either for withdrawal, reduction, or reassessment of the penalty. Reaffirm commitment to sporting fairness and regulatory consistency.
+
+---
+
+Penalty:
+{penalty_type}
+
+Race context:
+{race_conditions}
+
 {f"Driver: {driver}" if driver else ""}
 {f"Lap: {lap}, Turn: {turn}" if lap and turn else ""}
 
@@ -121,7 +138,7 @@ Legal Strategy Considerations:
 {', '.join(strategy_hints)}
 
 Before writing:
-Reflect on which regulation articles are most useful to the defense. Your reasoning in Section 3 must be anchored to those references.
+Briefly reflect on which of the above strategy considerations are most useful. Then write the complaint using **only** the regulation references above.
 """
 
     response = client.chat.completions.create(
