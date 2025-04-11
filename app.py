@@ -36,7 +36,7 @@ if submitted:
         complaint = generate_complaint(
             articles=retrieved_articles,
             penalty_type=penalty_type,
-            race_conditions=race_conditions,
+            race_context=race_conditions,
             driver=driver if driver else None,
             lap=lap if lap else None,
             turn=turn if turn else None
