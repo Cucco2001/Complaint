@@ -1,10 +1,10 @@
-import json
-import re
+import streamlit as st
 from openai import OpenAI
 
-client = OpenAI()
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def filter_relevant_articles(articles, penalty_type, race_context):
+def filter_relevant_articles(articles, penalty_type, race_conditions):
+    # Prepara input per GPT che farà da selettore di articoli
     articles_formatted = ""
     for article in articles:
         articles_formatted += f"--- {article['title']} ---\n{article['content']}\n"
@@ -12,88 +12,98 @@ def filter_relevant_articles(articles, penalty_type, race_context):
     prompt_filter = f"""
 You are a Formula 1 Sporting Regulations analyst.
 
+A driver has received the following penalty:
 Penalty: {penalty_type}
-Context: {race_context}
+Context: {race_conditions}
 
-Below are excerpts from the FIA 2025 Sporting Regulations. Select ONLY the articles that could be genuinely useful in supporting a legal defense of the driver. Avoid listing irrelevant or tangentially related ones.
+Below are several articles from the FIA 2025 Sporting Regulations. Select ALL the articles that could be useful in building a legal defense for the case described, even if they are not the most semantically obvious ones.
+Note: Even general articles such as Article 26 (GENERAL SAFETY) may contain useful support for the defense, especially in cases involving pit lane behavior or unsafe driving assessments.
 
-Respond in JSON format as:
+Respond in JSON format as follows:
 [
-  {{"article": "54.2(a)", "score": 3, "reason": "Defines burden of proof for assigning blame"}},
-  {{"article": "17.4", "score": 2, "reason": "Allows request for review if new evidence is present"}}
+  {{"article": "33", "score": 3, "reason": "Directly governs track limits"}},
+  ...
 ]
-
 Articles:
 {articles_formatted}
 """
 
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "user", "content": prompt_filter}],
+        messages=[
+            {"role": "user", "content": prompt_filter}
+        ],
         temperature=0.2,
         max_tokens=4000
     )
 
-    selected_articles = []
-    strategy_hints = []
+    # Estrai articoli selezionati
+    import json
+    import re
     json_match = re.search(r"\[.*?\]", response.choices[0].message.content, re.DOTALL)
+    selected_articles = []
     if json_match:
         try:
             filtered = json.loads(json_match.group(0))
-            for a in filtered:
-                if a["score"] >= 2:
-                    selected_articles.append(a["article"])
-                    strategy_hints.append(a["reason"])
-        except Exception:
+            selected_articles = [a["article"] for a in filtered if a["score"] >= 2]
+        except:
             pass
 
-    final_articles = []
+    # Forza inclusione Art. 54 se assente
+    if "54" not in selected_articles:
+        selected_articles.append("54")
+
+    # Ritorna articoli corrispondenti
+    final = []
     for art in articles:
         num = art["title"].split(")")[0].strip()
         if num in selected_articles:
-            final_articles.append(art)
+            final.append(art)
 
-    return {
-        "articles": final_articles,
-        "strategy_hints": list(set(strategy_hints))
-    }
+    return final
+def generate_complaint(articles, penalty_type, race_conditions, driver=None, lap=None, turn=None):
+    # STEP 1 – FILTRAGGIO INTELLIGENTE
 
-def generate_complaint(articles, penalty_type, race_context, driver=None, lap=None, turn=None):
-    filtered_result = filter_relevant_articles(articles, penalty_type, race_context)
-    filtered_articles = filtered_result["articles"]
-    strategy_hints = filtered_result["strategy_hints"]
+    filtered_articles = filter_relevant_articles(articles, penalty_type, race_conditions)
 
+    # STEP 2 – COSTRUZIONE DEL PROMPT FINALE
     regulation_section = ""
     for article in filtered_articles:
         regulation_section += f"\n--- {article['title']} ---\n{article['content']}\n"
 
     prompt_generate = f"""
-You are a legal advisor for a Formula 1 team. Write a formal complaint letter challenging a penalty.
+You are a legal advisor for a Formula 1 team. Based on the penalty details and regulatory references provided, write a formal complaint to the FIA Race Director.
 
-CRITICAL RULES:
-- Use ONLY the regulation articles provided below.
-- You MUST quote AT LEAST ONE article, more if relevant.
-- DO NOT refer to any article not shown below.
-- If article wording is ambiguous or open to interpretation, highlight this as a defense.
-- If the penalty appears excessive, emphasize proportionality.
-- Keep a legal and respectful tone.
+The letter must include:
+1. A formal header with: "To", "From", "Subject", "Date"
+2. Four numbered sections with headings:
+   - Factual Background
+   - Applicable Regulations
+   - Grounds for Review
+   - Conclusion and Request
+3. Direct quotations of regulation articles, where appropriate.
+4. You should include the regulation articles that could strengthen the defense or clarify procedural aspects.
+5. If the wording or scope of any regulation is ambiguous in this context, explicitly explain that ambiguity and its implications in the "Grounds for Review" section.
+6. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
+7. If appropriate, evaluate whether the penalty imposed was proportionate to the action, and if similar conduct has been treated differently in the past.
 
-Penalty: {penalty_type}
-Context: {race_context}
-Driver: {driver if driver else 'N/A'}
-Lap: {lap if lap else 'N/A'}, Turn: {turn if turn else 'N/A'}
+Penalty:
+{penalty_type}
 
-Regulation References:
+Race context:
+{race_conditions}
+
+{f"Driver: {driver}" if driver else ""}
+{f"Lap: {lap}, Turn: {turn}" if lap and turn else ""}
+
+Regulation references (from the FIA Sporting Regulations 2025):
 {regulation_section}
-
-Strategic Considerations:
-{', '.join(strategy_hints)}
 """
 
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a Formula 1 legal complaint writer."},
+            {"role": "system", "content": "You are a legal writer specialized in Formula 1 regulations."},
             {"role": "user", "content": prompt_generate}
         ],
         temperature=0.2,
