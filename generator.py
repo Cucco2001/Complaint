@@ -81,7 +81,7 @@ The letter must include:
    - Applicable Regulations
    - Grounds for Review
    - Conclusion and Request
-3. Try to quote directly the given articles whenever possible.
+3. Quote at least one regulation article verbatim. If more than one is relevant, include all that materially support the argument.
 4. You should include the regulation articles that could strengthen the defense or clarify procedural aspects.
 5. If the wording or scope of any regulation is ambiguous in this context, explicitly explain that ambiguity and its implications in the "Grounds for Review" section.
 6. Use a respectful and structured legal tone, as used in official correspondence by a Sporting & Legal Department.
