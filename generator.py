@@ -31,7 +31,7 @@ Articles:
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt_filter}],
         temperature=0.2,
         max_tokens=4000
@@ -125,7 +125,7 @@ Reflect on which regulation articles are most useful to the defense. Your reason
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt_generate}],
         temperature=0.2,
         max_tokens=4000
